@@ -1047,7 +1047,8 @@ function buildPrompt(text, typing) {
   if (mode !== "shorten" && $("tone").value) lines.push("- 어조: " + $("tone").value);
   lines.push("");
   if (mode === "review" || mode === "recommend") {
-    lines.push(assignPhrases(Number(val("count"))));
+    const praise = mode === "review" && typing && typing.names && typing.names.some((x) => /^칭찬/.test(x));
+    lines.push(praise && !$("inquiry").checked ? assignPraise(Number(val("count")), app.name) : assignPhrases(Number(val("count"))));
     lines.push("");
   }
   lines.push("[" + MODES[mode].input + "]");
@@ -1099,6 +1100,23 @@ function assignPhrases(n) {
     if (apo.length) parts.push("양해: " + apo[i % apo.length]);
     lines.push("- 버전 " + (i + 1) + " → " + parts.join(" | "));
   }
+  return lines.join("\n");
+}
+// 칭찬 유형은 감사 문장 3개와 다짐 틀 안에서만 쓰므로 모델에게 맡기면 매번 같은 조합이 나온다.
+// 6장 칭찬 블록의 목록과 틀을 읽어 코드가 버전마다 다른 조합을 배정한다.
+function assignPraise(n, appName) {
+  const block = typeBlocks().blocks.find((b) => /^\*\*칭찬\*\*/.test(b)) || "";
+  const thanks = block.split("\n").filter((l) => /^  - /.test(l)).map((l) => l.trim().slice(2).replace("[앱 이름]을", appName + "를"));
+  const tpl = (block.match(/다짐 문장은 "([^"]+)"/) || [])[1] || "";
+  let pledges = [""];
+  tpl.split(/(\[[^\]]+\])/).forEach((part) => {
+    const opts = /^\[/.test(part) ? part.slice(1, -1).split("/").map((x) => x.trim()) : [part];
+    pledges = pledges.flatMap((p) => opts.map((o) => p + o));
+  });
+  pledges = shuffle(pledges.map((p) => p.trim() + "."));
+  const th = shuffle(thanks);
+  const lines = ["[칭찬 배정]", "이 리뷰는 칭찬 유형이다. 버전마다 아래 배정된 감사 문장과 다짐 문장을 글자 그대로 쓴다. 다른 문장을 고르거나 고치지 않는다."];
+  for (let i = 0; i < n; i++) lines.push("- 버전 " + (i + 1) + " → 감사: " + th[i % th.length] + " | 다짐: " + pledges[i % pledges.length]);
   return lines.join("\n");
 }
 function lastSentence(body) {
