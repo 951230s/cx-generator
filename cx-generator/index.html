@@ -118,8 +118,6 @@ select, textarea {
 textarea { min-height: 150px; resize: vertical; line-height: 1.55; }
 select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .seg[hidden], .hint[hidden] { display: none; }
-.tog { padding: 6px 11px; font-size: 13px; }
-.tog[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
 .sub { padding-left: 10px; border-left: 2px solid var(--line); }
 .hint { font-size: 12px; color: var(--muted); margin: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -164,6 +162,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .chip.bad { background: var(--bad-soft); color: var(--bad); }
 .copy { font-size: 13px; padding: 5px 12px; }
 .sample-tag { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; margin-left: 8px; }
+.typeline { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.typeline strong { font-weight: 600; }
+.typeline .why { color: var(--muted); }
+.typeline.bad { border-color: var(--warn); }
 .raw { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) { button, .seg span { transition: background-color .12s, border-color .12s; } }
 </style>
@@ -215,21 +217,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
 
       <div class="field" id="f-topic">
-        <span class="label" id="l-topic">유형 지정 (꺼 두면 자동 판정)</span>
-        <div class="seg" role="group" aria-labelledby="l-topic">
-          <button type="button" class="tog" data-topic="error" aria-pressed="false">앱 오류</button>
-          <button type="button" class="tog" data-topic="install" aria-pressed="false">설치·업데이트 불가</button>
-          <button type="button" class="tog" data-topic="update" aria-pressed="false">업데이트 불만</button>
-        </div>
+        <label class="label" for="ctype">유형</label>
+        <select id="ctype"><option value="">자동 판정</option></select>
         <div class="seg sub" id="sub-error" role="radiogroup" aria-label="앱 오류 안내 방법" hidden>
           <label><input type="radio" name="guide" value="재부팅 + 채팅상담" checked><span>재부팅 + 채팅상담</span></label>
           <label><input type="radio" name="guide" value="오류 화면 문자 발송 + 1:1문의"><span>문자 발송 + 1:1문의</span></label>
           <label><input type="radio" name="guide" value="오류 화면 메일 발송 + 1:1문의"><span>메일 발송 + 1:1문의</span></label>
           <label><input type="radio" name="guide" value="안내 없이 담당 부서 건의"><span>담당 부서 전달</span></label>
-        </div>
-        <div class="seg sub" id="sub-install" role="radiogroup" aria-label="설치·업데이트 불가 원인" hidden>
-          <label><input type="radio" name="install" value="지원 버전 미만" checked><span>지원 버전 미만 (구형 기기)</span></label>
-          <label><input type="radio" name="install" value="캐시 삭제 안내"><span>캐시 삭제 안내</span></label>
         </div>
         <div class="seg sub" id="sub-update" role="radiogroup" aria-label="업데이트 불만 답변 구성" hidden>
           <label><input type="radio" name="reply" value="전달만" checked><span>전달만</span></label>
@@ -276,6 +270,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <h2 id="results-title">결과</h2>
         <p>자동 점검은 금지어, 경로 표기, 글자 수만 봅니다. 내용은 직접 확인하세요.</p>
       </div>
+      <div class="typeline" id="typeline" hidden></div>
       <div id="cards" class="results"></div>
     </section>
   </div>
@@ -798,19 +793,31 @@ const $ = (id) => document.getElementById(id);
 const val = (name) => document.querySelector('input[name="' + name + '"]:checked').value;
 let sample = null;
 let controller = null;
-let topic = null;
-const TOPIC_HINT = {
-  error: "앱 오류 유형으로 쓰고, 고른 안내 방법을 적용합니다.",
-  install: "설치·업데이트가 안 된다는 리뷰에 고른 원인으로 답합니다.",
-  update: "업데이트 자체에 대한 불만으로 보고, 고른 구성으로 답합니다. 확인 안내는 상황을 1:1문의에 남겨달라는 안내입니다."
-};
+const ERROR_TYPE = /^앱 오류: 연결 실패/;
+const UPDATE_TYPE = /^업데이트·개편 불만/;
+// 유형 선택 목록은 6장 블록 제목에서 만든다. 고속버스 티머니에서는 택시·자전거 유형을 뺀다.
+function fillTypes() {
+  const sel = $("ctype");
+  const keep = sel.value;
+  sel.length = 1;
+  typeList(val("app")).forEach((t) => {
+    const o = document.createElement("option");
+    o.value = t.name;
+    o.textContent = t.name;
+    sel.appendChild(o);
+  });
+  sel.value = Array.from(sel.options).some((o) => o.value === keep) ? keep : "";
+  syncTopic();
+}
 function syncTopic() {
-  document.querySelectorAll(".tog").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.topic === topic)));
-  $("sub-error").hidden = topic !== "error";
-  $("sub-install").hidden = topic !== "install";
-  $("sub-update").hidden = topic !== "update";
-  $("topic-hint").hidden = !topic;
-  $("topic-hint").textContent = topic ? TOPIC_HINT[topic] : "";
+  const name = $("ctype").value;
+  $("sub-error").hidden = !ERROR_TYPE.test(name);
+  $("sub-update").hidden = !UPDATE_TYPE.test(name);
+  const hint = !name ? "버튼을 누르면 유형을 먼저 판정해 결과 위에 보여 줍니다. 틀렸으면 여기서 바꾸고 다시 만드세요."
+    : UPDATE_TYPE.test(name) ? "확인 안내는 상황을 1:1문의에 남겨달라는 안내입니다."
+    : "판정 없이 이 유형으로 바로 씁니다.";
+  $("topic-hint").hidden = false;
+  $("topic-hint").textContent = hint;
 }
 
 function remember() {
@@ -875,6 +882,104 @@ function typeBlocks() {
   const parts = SEC["6"].split(/\n\n(?=\*\*)/);
   return { head: parts[0], blocks: parts.slice(1) };
 }
+// 6장 블록 하나 = 유형 하나. name은 굵은 제목, title은 괄호 설명까지 포함한 첫 줄.
+function typeList(appKey) {
+  return typeBlocks().blocks
+    .filter((b) => appKey === "go" || (!TAXI_BLOCK.test(b) && !BIKE_BLOCK.test(b)))
+    .map((b) => {
+      const first = b.split("\n")[0];
+      return { name: first.match(/^\*\*(.+?)\*\*/)[1], title: first.replace(/\*\*/g, ""), block: b };
+    });
+}
+// 사용자가 지정할 때만 쓰는 유형은 자동 판정 후보에서 뺀다.
+const MANUAL_ONLY = /사용자가 이 원인을 지정했을 때만/;
+
+// 유형별로 필요한 10장 절. 목록에 없는 유형은 공통만 보낸다.
+function factSections(names) {
+  const want = new Set();
+  if (!names.length) return null;
+  for (const n of names) {
+    if (/^칭찬/.test(n)) continue;
+    if (/^(기타|단순 불만|개선 요청)/.test(n)) return null;
+    want.add("공통");
+    if (/^택시/.test(n)) want.add("택시");
+    if (/^(반납 오류|주행 불가|QR 카메라)/.test(n)) want.add("자전거");
+    if (/^(결제수단|타인 명의|취소 수수료|환불)/.test(n)) { want.add("결제"); want.add("고속"); }
+    if (/^(광고|상담 연결|고객센터)/.test(n)) want.add("고속");
+  }
+  return want;
+}
+function buildFacts(appKey, names) {
+  const parts = subs(SEC["10"]);
+  const want = factSections(names);
+  const kept = parts.filter((s, i) => {
+    if (i === 0) return true;
+    if (appKey !== "go" && /^### (자전거|택시)/.test(s)) return false;
+    if (!want) return true;
+    return Array.from(want).some((w) => s.startsWith("### " + w));
+  });
+  return kept.length > 1 ? kept.join("\n") : "";
+}
+
+// 앱 리뷰 답변: 판정된(또는 지정된) 유형의 지침만 보낸다. names가 null이면 판정 실패로 보고 전체를 보낸다.
+function buildReviewRules(appKey, names) {
+  const fixed = pathLines(SEC["5"], appKey);
+  const base = [SEC.intro, SEC["2"], SEC["3"], SEC["4"], fixed];
+  const t = typeBlocks();
+  const list = typeList(appKey);
+  let six;
+  if (names === null) {
+    six = t.head + "\n\n" + list.map((x) => x.block).join("\n\n");
+  } else if (!names.length) {
+    six = t.head.replace("유형을 먼저 판정하고 그 지침을 따른다.", "이 리뷰는 유형을 정하기 어려운 모호한 리뷰로 판정되었다. 3장 7)의 '모호하면' 처리대로 쓴다.");
+  } else {
+    const blocks = list.filter((x) => names.includes(x.name)).map((x) => x.block);
+    six = t.head.replace("유형을 먼저 판정하고 그 지침을 따른다.", "이 리뷰의 유형은 판정되었다. 아래 유형 지침을 따른다." + (blocks.length > 1 ? " 쟁점이 둘이므로 두 지침을 함께 따르고, 각 쟁점에 한 문장씩 답한다." : "")) + "\n\n" + blocks.join("\n\n");
+  }
+  const facts = buildFacts(appKey, names || []);
+  return base.concat([six, SEC["9"]], facts ? [facts] : [], [SEC["11"]]).join("\n\n");
+}
+
+// 1단계: 유형만 판정한다. 블록 제목과 블록 안의 판정 기준 문장만 보낸다.
+function buildClassifyPrompt(appKey, text) {
+  const list = typeList(appKey).filter((x) => !MANUAL_ONLY.test(x.title));
+  const hints = [];
+  list.forEach((x) => x.block.split("\n").forEach((l) => { if (/판정한다|유형으로/.test(l) && !l.startsWith("**")) hints.push(l.replace(/^- /, "- [" + x.name + "] ")); }));
+  const lines = [];
+  lines.push("고객 앱 리뷰에 답변하기 전에, 리뷰가 아래 유형 중 무엇에 해당하는지 판정한다. 답변은 쓰지 않는다.");
+  lines.push("");
+  lines.push("앱: " + PATHS[appKey].name);
+  lines.push("");
+  lines.push("[유형]");
+  list.forEach((x, i) => lines.push((i + 1) + ". " + x.title));
+  lines.push("");
+  lines.push("[판정 기준]");
+  lines.push("- 고객이 불만으로 삼거나 답을 바라는 핵심 쟁점으로 고른다. 리뷰에 어떤 단어(업데이트, 광고, 오류 등)가 나왔다는 이유만으로 고르지 않는다.");
+  lines.push("- 배경이나 사정으로 지나가듯 말한 내용은 쟁점이 아니다.");
+  lines.push("- 쟁점이 서로 다른 유형 둘이면 둘을 고른다. 셋 이상이면 가장 큰 둘만.");
+  lines.push("- 어떤 서비스나 상황인지 알 수 없을 만큼 모호하면 0을 고른다.");
+  lines.push("- 맞는 유형이 없으면 '기타'를 고른다.");
+  hints.forEach((h) => lines.push(h));
+  lines.push("");
+  lines.push("[리뷰]");
+  lines.push(text);
+  lines.push("");
+  lines.push('JSON 하나만 출력한다: {"types": [번호, ...], "reason": "판정 이유 한 문장"}');
+  return { prompt: lines.join("\n"), list: list };
+}
+async function classify(appKey, text, signal) {
+  const c = buildClassifyPrompt(appKey, text);
+  const out = await sample(c.prompt, { signal: signal, cache: false });
+  const m = (out.text || "").match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  let data;
+  try { data = JSON.parse(m[0]); } catch (e) { return null; }
+  const nums = Array.isArray(data.types) ? data.types.map(Number) : [];
+  if (nums.some((n) => !Number.isInteger(n) || n < 0 || n > c.list.length)) return null;
+  const names = nums.filter((n) => n > 0).slice(0, 2).map((n) => c.list[n - 1].name);
+  return { names: names, reason: typeof data.reason === "string" ? data.reason : "" };
+}
+
 function buildRules(mode, appKey, text) {
   const fixed = pathLines(SEC["5"], appKey);
   if (mode === "shorten") {
@@ -884,11 +989,6 @@ function buildRules(mode, appKey, text) {
   }
   const base = [SEC.intro, SEC["2"], SEC["3"], SEC["4"], fixed];
   const t = typeBlocks();
-  if (mode === "review") {
-    const blocks = appKey === "go" ? t.blocks : t.blocks.filter((b) => !TAXI_BLOCK.test(b) && !BIKE_BLOCK.test(b));
-    const facts = subs(SEC["10"]).filter((s) => appKey === "go" || !/^### (자전거|택시)/.test(s)).join("\n");
-    return base.concat([t.head + "\n\n" + blocks.join("\n\n"), SEC["9"], facts, SEC["11"]]).join("\n\n");
-  }
   const related = t.blocks.filter((b) => {
     if (appKey !== "go" && (TAXI_BLOCK.test(b) || BIKE_BLOCK.test(b))) return false;
     return BLOCK_KEYS.some(([key, title]) => key.test(text) && title.test(b));
@@ -898,26 +998,26 @@ function buildRules(mode, appKey, text) {
   return out.concat(mode === "polish" ? [SEC["11"]] : [SEC["9"], SEC["11"]]).join("\n\n");
 }
 
-function buildPrompt(text) {
+// typing: 앱 리뷰 답변일 때 { names, manual }. names가 null이면 판정 실패.
+function buildPrompt(text, typing) {
   const mode = val("mode");
   const app = PATHS[val("app")];
   const lines = [];
   lines.push("너는 아래 [규칙]에 따라 고객 응대 문장을 쓰는 담당자다.");
   lines.push("");
   lines.push("[규칙]");
-  lines.push(buildRules(mode, val("app"), text));
+  lines.push(mode === "review" ? buildReviewRules(val("app"), typing.names) : buildRules(mode, val("app"), text));
   lines.push("");
   lines.push("[작업 조건]");
   lines.push("- 모드: " + MODES[mode].label);
   lines.push("- 앱: " + app.name);
   if (mode === "review") {
     lines.push("- 스토어: " + (val("store") === "ios" ? "아이폰(앱스토어)" : "안드로이드(구글플레이)"));
-    if (topic === "error") {
-      lines.push("- 리뷰 유형(사용자 지정): 앱 오류. 6장의 앱 오류 유형으로 쓰고, 업데이트·개편 불만 유형으로 판정하지 않는다.");
-      lines.push("- 앱 오류 안내 방법: " + val("guide"));
+    if (typing.names && typing.names.length) {
+      lines.push("- 리뷰 유형(" + (typing.manual ? "사용자 지정" : "판정 완료") + "): " + typing.names.join(", ") + ". 다른 유형으로 다시 판정하지 않는다.");
+      if (typing.manual && typing.names.some((n) => ERROR_TYPE.test(n))) lines.push("- 앱 오류 안내 방법: " + val("guide"));
+      if (typing.manual && typing.names.some((n) => UPDATE_TYPE.test(n))) lines.push("- 업데이트·개편 불만 구성: " + val("reply"));
     }
-    if (topic === "install") lines.push("- 리뷰 유형(사용자 지정): 설치·업데이트 불가. 6장의 '설치·업데이트 불가: " + val("install") + "' 유형으로 쓴다.");
-    if (topic === "update") lines.push("- 리뷰 유형(사용자 지정): 업데이트·개편 불만. 6장의 '업데이트·개편 불만' 유형으로 쓴다. 구성: " + val("reply") + ".");
   }
   if (mode === "recommend" || mode === "polish") lines.push("- 문장 유형: " + $("type").value);
   if (mode !== "shorten" && $("tone").value) lines.push("- 어조: " + $("tone").value);
@@ -1086,6 +1186,30 @@ function renderRaw(text) {
   box.appendChild(card);
 }
 
+function showType(typing) {
+  const box = $("typeline");
+  box.textContent = "";
+  box.className = "typeline";
+  const head = document.createElement("div");
+  const label = document.createElement("strong");
+  const why = document.createElement("div");
+  why.className = "why";
+  if (typing.manual) {
+    label.textContent = "지정 유형: " + typing.names[0];
+    why.textContent = "판정 없이 지정한 유형으로 썼습니다.";
+  } else if (typing.names === null) {
+    box.className = "typeline bad";
+    label.textContent = "유형 판정 실패";
+    why.textContent = "전체 유형 지침을 보내 모델이 고르게 했습니다. 결과가 이상하면 왼쪽 '유형'에서 직접 고르세요.";
+  } else {
+    label.textContent = "판정 유형: " + (typing.names.length ? typing.names.join(" + ") : "모호함 (확인 요청으로 답변)");
+    why.textContent = (typing.reason ? typing.reason + " " : "") + "틀렸으면 왼쪽 '유형'에서 바꾸고 다시 만드세요.";
+  }
+  head.appendChild(label);
+  box.append(head, why);
+  box.hidden = false;
+}
+
 function setStatus(text, bad) {
   $("status").textContent = text;
   $("status").className = "status" + (bad ? " bad" : "");
@@ -1106,11 +1230,26 @@ async function run(e) {
   const app = val("app");
   controller = new AbortController();
   setBusy(true);
-  setStatus("작성 중입니다…", false);
   $("results-title").textContent = MODES[mode].label + " 결과";
-  renderRaw("작성 중입니다…");
+  $("typeline").hidden = true;
   try {
-    const out = await sample(buildPrompt(text), {
+    let typing = null;
+    if (mode === "review") {
+      const chosen = $("ctype").value;
+      if (chosen) {
+        typing = { names: [chosen], manual: true };
+        showType(typing);
+      } else {
+        setStatus("유형을 판정하고 있습니다…", false);
+        renderRaw("유형을 판정하고 있습니다…");
+        const r = await classify(app, text, controller.signal);
+        typing = r ? { names: r.names, reason: r.reason, manual: false } : { names: null, manual: false };
+        showType(typing);
+      }
+    }
+    setStatus("작성 중입니다…", false);
+    renderRaw("작성 중입니다…");
+    const out = await sample(buildPrompt(text, typing), {
       signal: controller.signal,
       cache: false,
       onText: ({ text: t }) => { if (t) renderRaw(t); }
@@ -1143,8 +1282,9 @@ async function run(e) {
 restore();
 syncFields();
 document.querySelectorAll('input[name="mode"]').forEach((el) => el.addEventListener("change", syncFields));
-document.querySelectorAll(".tog").forEach((b) => b.addEventListener("click", () => { topic = topic === b.dataset.topic ? null : b.dataset.topic; syncTopic(); }));
-syncTopic();
+document.querySelectorAll('input[name="app"]').forEach((el) => el.addEventListener("change", fillTypes));
+$("ctype").addEventListener("change", syncTopic);
+fillTypes();
 $("form").addEventListener("submit", run);
 $("stop").addEventListener("click", () => { if (controller) controller.abort(); });
 renderCards(SAMPLE, { mode: "review", app: "go", sample: true });
