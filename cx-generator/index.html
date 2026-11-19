@@ -554,7 +554,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 **광고 불만**
 - 팀 광고 응대 가이드를 따른다. 3장 4)의 "담당 부서에 전달" 표현과 9장 마무리보다 이 지침이 앞선다.
 - 리뷰가 광고를 불만이나 질문으로 삼으면 이 유형으로 판정한다. 광고와 함께 버튼 반응·로딩 지연·느린 속도나 화면 구성(자주 쓰는 메뉴가 작아짐, 기사·광고가 자리를 차지함)을 말해도 이 유형으로 판정한다.
-- 모든 버전에서 쓰지 않는 것: 담당 부서 전달·검토·건의(광고에 대한 의견은 담당 부서에 전달하겠습니다, 검토될 수 있도록 하겠습니다 등), 광고를 줄이거나 없애겠다는 약속, 광고 정책 변경·일정 예고. 확인된 현재 운영 방식과 고객이 지금 할 수 있는 방법만 안내한다.
+- 모든 버전에서 쓰지 않는 것: 담당 부서 전달·검토·건의(광고에 대한 의견은 담당 부서에 전달하겠습니다, 검토될 수 있도록 하겠습니다 등), 광고를 줄이거나 없애겠다는 약속, 광고 정책 변경·일정 예고, 재부팅·데이터 재접속·채팅상담·1:1문의·기종·OS 요청 등 고객에게 무언가를 하라는 안내(나)의 로그인 권유만 예외). 광고 운영·관리, 성능 최적화 작업은 회사가 확인한 사실이므로 사실로 쓴다. 확인된 현재 운영 방식과 고객이 지금 할 수 있는 방법만 안내한다.
 - 아래 상황 중 리뷰에 맞는 것으로 쓴다. 광고 외 쟁점(속도, 화면 구성)이 함께 있으면 광고 설명과 그 쟁점 안내를 서로 다른 문장으로 나눠 쓴다. 한 문장으로 뭉뚱그리지 않는다.
 - 가) 광고 자체 불만·광고를 왜 넣었는지 질문(화면 이동 때 광고가 뜸, 교통 앱에 왜 광고가 있나 등)
   - 공감 또는 사과 → 광고 운영 설명 → 광고 관리 문장.
@@ -566,10 +566,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   - 로그인 권유·마무리 기준: "보다 편리한 이용을 위해 로그인 후 이용해 주시기 바라며, 편리하게 예매하실 수 있도록 노력하겠습니다."
   - 고속버스 티머니 앱의 로그인 화면 광고는 이 안내를 쓰지 않고 10장(외부 업체 광고) 사실을 따른다.
 - 다) 광고 + 버튼 반응·로딩 지연·느린 속도
-  - 공감 또는 사과 → 광고 운영 설명(가)의 기준을 짧게) → 광고에 대한 양해 → 성능 최적화 문장 → 계속되면 1:1문의 안내.
+  - 공감 또는 사과 → 광고 운영 설명(가)의 기준을 짧게) → 광고에 대한 양해 → 성능 최적화 문장.
   - 양해 기준: "다만 이로 인해 이용이 불편하셨을 수 있는 점 양해 부탁드립니다."
   - 성능 최적화 기준: "화면 전환과 버튼 반응 속도와 관련하여, 앱 반응 속도는 편리한 이용과 직결되는 부분인 만큼 전반적인 반응 속도 향상을 위해 성능 최적화와 안정화 작업을 지속적으로 진행하고 있습니다." 반드시 넣을 것: 성능 최적화와 안정화를 지속적으로 진행. 오류·지연을 사실로 인정하는 표현(지연이 잦아, 반복되어)은 쓰지 않는다(3장 1).
-  - 1:1문의 기준: "특정 화면에서 지연이나 오류가 계속되면 기종 정보와 함께 1:1문의(경로)로 남겨주시면 빠르게 확인하겠습니다." 반드시 넣을 것: 계속되면, 기종 정보, 1:1문의(선택된 앱 경로).
 - 라) 광고 + 화면 구성(자주 쓰는 메뉴가 작아짐, 기사·광고 등 부가 콘텐츠가 자리를 차지해 필요한 기능을 찾기 어려움)
   - 공감 또는 사과(리뷰가 말한 기능을 찾기 어려웠던 불편에 대해) → 광고·부가 콘텐츠 운영 설명 → 주요 메뉴 개선 문장.
   - 사과 기준: "마이 메뉴의 이용내역 등 자주 이용하시는 기능을 찾으시는 과정에서 불편을 드려 죄송합니다." 리뷰가 말한 기능 이름으로 바꿔 쓴다.
@@ -1042,6 +1041,12 @@ function buildRules(mode, appKey, text) {
   return out.concat(mode === "polish" ? [SEC["11"]] : [SEC["9"], SEC["11"]]).join("\n\n");
 }
 
+// 광고 불만은 팀 광고 가이드상 1:1문의·채팅상담·재부팅을 안내하지 않으므로 체크박스를 적용하지 않는다.
+const AD_TYPE = /^광고/;
+function inquiryApplies(typing) {
+  return $("inquiry").checked && !(typing && typing.names && typing.names.some((n) => AD_TYPE.test(n)));
+}
+
 // typing: 앱 리뷰 답변일 때 { names, manual }. names가 null이면 판정 실패.
 function buildPrompt(text, typing) {
   const mode = val("mode");
@@ -1062,7 +1067,7 @@ function buildPrompt(text, typing) {
       if (val("guide") && typing.names.some((n) => ERROR_TYPE.test(n))) lines.push("- 앱 오류 안내 방법(사용자 지정): " + val("guide"));
       if (typing.manual && typing.names.some((n) => UPDATE_TYPE.test(n))) lines.push("- 업데이트·개편 불만 구성: " + val("reply"));
     }
-    if ($("inquiry").checked) {
+    if (inquiryApplies(typing)) {
       lines.push("- 답변 구성(사용자 지정, 유형 지침의 구성보다 앞선다): 공감 또는 사과 → 5장의 1:1문의 안내 문구 → 마무리(9장 일반). 유형 지침에 있는 안내(재부팅, 채팅상담, 확인 어려움 문장, 담당 부서 전달, 배차 방식 설명 등)와 유형별 마무리 기준 문장은 쓰지 않는다. 공감·사과의 대상과 금지 표현은 유형 지침을 따른다.");
     }
   }
@@ -1071,7 +1076,7 @@ function buildPrompt(text, typing) {
   lines.push("");
   if (mode === "review" || mode === "recommend") {
     const praise = mode === "review" && typing && typing.names && typing.names.some((x) => /^칭찬/.test(x));
-    lines.push(praise && !$("inquiry").checked ? assignPraise(Number(val("count")), app.name) : assignPhrases(Number(val("count"))));
+    lines.push(praise && !inquiryApplies(typing) ? assignPraise(Number(val("count")), app.name) : assignPhrases(Number(val("count"))));
     lines.push("");
   }
   lines.push("[" + MODES[mode].input + "]");
@@ -1162,6 +1167,7 @@ function checkVersion(body, all, mode, appKey) {
   // 광고 응대 가이드(6장 광고 불만): 담당 부서 전달, 광고 축소·제거 약속을 쓰지 않는다.
   if (/광고/.test(body) && /담당 ?부서/.test(body)) flags.push({ level: "warn", text: "광고 답변에 담당 부서 전달" });
   if (/광고[^.]{0,15}(줄이|줄여|축소|없애|제거|최소화)/.test(body)) flags.push({ level: "bad", text: "광고 축소·제거 약속" });
+  if (/광고/.test(body) && /재부팅|채팅상담|1:1 ?문의/.test(body)) flags.push({ level: "warn", text: "광고 답변에 재부팅·상담 안내" });
   if (/1:1문의\(/.test(body) && !b.includes(squash(p.inquiry))) flags.push({ level: "warn", text: "1:1문의 경로 표기 확인" });
   if (/채팅상담\(/.test(body) && !b.includes(squash(p.chat))) flags.push({ level: "warn", text: "채팅상담 경로 표기 확인" });
   const other = PATHS[appKey === "go" ? "express" : "go"];
@@ -1273,7 +1279,8 @@ function showType(typing) {
     label.textContent = "판정 유형: " + (typing.names.length ? typing.names[0] : "모호함 (확인 요청으로 답변)");
     why.textContent = (typing.reason ? typing.reason + " " : "") + "틀렸으면 왼쪽 '유형'에서 바꾸고 다시 만드세요.";
   }
-  if ($("inquiry").checked) label.textContent += " · 1:1문의 안내로 씀";
+  if (inquiryApplies(typing)) label.textContent += " · 1:1문의 안내로 씀";
+  else if ($("inquiry").checked) label.textContent += " · 광고 불만은 1:1문의 안내를 쓰지 않음";
   else if (val("guide") && typing.names && typing.names.some((n) => ERROR_TYPE.test(n))) label.textContent += " · 안내: " + val("guide");
   head.appendChild(label);
   box.append(head, why);
