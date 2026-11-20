@@ -70,10 +70,10 @@ body {
 .wrap {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: 16px 16px 40px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
 }
 header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
 h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
@@ -84,12 +84,14 @@ header p { margin: 0; color: var(--muted); font-size: 13px; }
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 18px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
-.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; align-items: start; }
+.row > .field[hidden] { display: none; }
 .field[hidden] { display: none; }
 .label { font-size: 12px; font-weight: 600; color: var(--muted); }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -97,7 +99,7 @@ header p { margin: 0; color: var(--muted); font-size: 13px; }
 .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .seg span {
   display: block;
-  padding: 6px 11px;
+  padding: 5px 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
   font-size: 13px;
@@ -115,7 +117,7 @@ select, textarea {
   border-radius: 7px;
   padding: 8px 10px;
 }
-textarea { min-height: 150px; resize: vertical; line-height: 1.55; }
+textarea { min-height: 110px; resize: vertical; line-height: 1.55; }
 select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .seg[hidden], .hint[hidden] { display: none; }
 .sub { padding-left: 10px; border-left: 2px solid var(--line); }
@@ -132,7 +134,7 @@ button {
 }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; padding: 9px 18px; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
-.status { font-size: 13px; color: var(--muted); min-height: 1.6em; margin: 0; }
+.status { font-size: 13px; color: var(--muted); margin: 0; flex: 1 1 140px; }
 .status.bad { color: var(--bad); }
 .results { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .results-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 12px; }
@@ -162,10 +164,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .chip.bad { background: var(--bad-soft); color: var(--bad); }
 .copy { font-size: 13px; padding: 5px 12px; }
 .sample-tag { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; margin-left: 8px; }
-.check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 6px; cursor: pointer; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 2px; cursor: pointer; }
 .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .seg .sublabel { width: 100%; font-size: 12px; color: var(--muted); }
 .typeline { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.typeline[hidden] { display: none; }
 .typeline strong { font-weight: 600; }
 .typeline .why { color: var(--muted); }
 .typeline.bad { border-color: var(--warn); }
@@ -183,28 +186,37 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   <div class="grid">
     <form class="panel" id="form">
       <div class="field">
-        <span class="label" id="l-mode">모드</span>
-        <div class="seg" role="radiogroup" aria-labelledby="l-mode">
-          <label><input type="radio" name="mode" id="mode-review" value="review" checked><span>앱 리뷰 답변</span></label>
-          <label><input type="radio" name="mode" id="mode-recommend" value="recommend"><span>문장 추천</span></label>
-          <label><input type="radio" name="mode" id="mode-polish" value="polish"><span>문장 다듬기</span></label>
-          <label><input type="radio" name="mode" id="mode-shorten" value="shorten"><span>350자 줄이기</span></label>
-        </div>
+        <label class="label" for="input" id="l-input">고객 리뷰</label>
+        <textarea id="input" spellcheck="false">택시 불렀는데 30분째 안 잡혀요. 급할 때 쓰라고 만든 앱 아닌가요</textarea>
       </div>
 
-      <div class="field">
-        <span class="label" id="l-app">앱</span>
-        <div class="seg" role="radiogroup" aria-labelledby="l-app">
-          <label><input type="radio" name="app" id="app-go" value="go" checked><span>티머니GO</span></label>
-          <label><input type="radio" name="app" id="app-express" value="express"><span>고속버스 티머니</span></label>
-        </div>
+      <div class="actions">
+        <button type="submit" class="primary" id="go">문장 만들기</button>
+        <button type="button" id="stop" hidden>중단</button>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
       </div>
 
-      <div class="field" id="f-store">
-        <span class="label" id="l-store">스토어</span>
-        <div class="seg" role="radiogroup" aria-labelledby="l-store">
-          <label><input type="radio" name="store" id="store-android" value="android" checked><span>안드로이드</span></label>
-          <label><input type="radio" name="store" id="store-ios" value="ios"><span>아이폰</span></label>
+      <div class="seg" role="radiogroup" aria-label="모드">
+        <label><input type="radio" name="mode" id="mode-review" value="review" checked><span>앱 리뷰 답변</span></label>
+        <label><input type="radio" name="mode" id="mode-recommend" value="recommend"><span>문장 추천</span></label>
+        <label><input type="radio" name="mode" id="mode-polish" value="polish"><span>문장 다듬기</span></label>
+        <label><input type="radio" name="mode" id="mode-shorten" value="shorten"><span>350자 줄이기</span></label>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <span class="label" id="l-app">앱</span>
+          <div class="seg" role="radiogroup" aria-labelledby="l-app">
+            <label><input type="radio" name="app" id="app-go" value="go" checked><span>티머니GO</span></label>
+            <label><input type="radio" name="app" id="app-express" value="express"><span>고속버스</span></label>
+          </div>
+        </div>
+        <div class="field" id="f-store">
+          <span class="label" id="l-store">스토어</span>
+          <div class="seg" role="radiogroup" aria-labelledby="l-store">
+            <label><input type="radio" name="store" id="store-android" value="android" checked><span>안드로이드</span></label>
+            <label><input type="radio" name="store" id="store-ios" value="ios"><span>아이폰</span></label>
+          </div>
         </div>
       </div>
 
@@ -220,56 +232,50 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
 
       <div class="field" id="f-topic">
-        <label class="label" for="ctype">유형</label>
-        <select id="ctype"><option value="">자동 판정</option></select>
-        <div class="seg sub" id="sub-error" role="radiogroup" aria-labelledby="l-guide" hidden>
-          <span class="sublabel" id="l-guide">앱 오류일 때 안내 방법</span>
-          <label><input type="radio" name="guide" value="" checked><span>규칙대로</span></label>
-          <label><input type="radio" name="guide" value="재부팅 + 채팅상담"><span>재부팅 + 채팅상담</span></label>
-          <label><input type="radio" name="guide" value="오류 화면 문자 발송 + 1:1문의"><span>문자 발송 + 1:1문의</span></label>
-          <label><input type="radio" name="guide" value="오류 화면 메일 발송 + 1:1문의"><span>메일 발송 + 1:1문의</span></label>
-          <label><input type="radio" name="guide" value="안내 없이 담당 부서 건의"><span>담당 부서 전달</span></label>
+        <div class="row">
+          <div class="field">
+            <label class="label" for="ctype">유형</label>
+            <select id="ctype"><option value="">자동 판정</option></select>
+          </div>
+          <div class="field" id="sub-error" hidden>
+            <label class="label" for="guide">앱 오류 안내</label>
+            <select id="guide" title="자동 판정이면 앱 오류로 판정됐을 때만 적용됩니다.">
+              <option value="">규칙대로</option>
+              <option value="재부팅 + 채팅상담">재부팅 + 채팅상담</option>
+              <option value="오류 화면 문자 발송 + 1:1문의">문자 발송 + 1:1문의</option>
+              <option value="오류 화면 메일 발송 + 1:1문의">메일 발송 + 1:1문의</option>
+              <option value="안내 없이 담당 부서 건의">담당 부서 전달</option>
+            </select>
+          </div>
         </div>
-        <div class="seg sub" id="sub-update" role="radiogroup" aria-label="업데이트 불만 답변 구성" hidden>
+        <div class="seg" id="sub-update" role="radiogroup" aria-label="업데이트 불만 답변 구성" hidden>
           <label><input type="radio" name="reply" value="전달만" checked><span>전달만</span></label>
-          <label><input type="radio" name="reply" value="확인 안내만"><span>확인 안내만</span></label>
+          <label><input type="radio" name="reply" value="확인 안내만" title="상황을 1:1문의에 남겨달라는 안내"><span>확인 안내만</span></label>
         </div>
-        <p class="hint" id="topic-hint" hidden></p>
-        <label class="check"><input type="checkbox" id="inquiry"><span>1:1문의 안내로 쓰기</span></label>
-        <p class="hint">켜면 유형과 상관없이 "불편한 점은 1:1문의에 남겨주시면 확인해 안내하겠다"는 팀 문구로 답합니다.</p>
+        <label class="check" title="켜면 유형과 상관없이 '불편한 점은 1:1문의에 남겨주시면 확인해 안내하겠다'는 팀 문구로 답합니다. 광고 불만에는 적용되지 않습니다."><input type="checkbox" id="inquiry"><span>1:1문의 안내로 쓰기</span></label>
       </div>
 
-      <div class="field" id="f-tone">
-        <label class="label" for="tone">어조</label>
-        <select id="tone">
-          <option value="">지정 안 함</option>
-          <option value="전문적">전문적</option>
-          <option value="친근한">친근한</option>
-          <option value="공감형" selected>공감형</option>
-          <option value="간결한">간결한</option>
-          <option value="진심 어린">진심 어린</option>
-          <option value="격식체">격식체</option>
-        </select>
-      </div>
-
-      <div class="field" id="f-count">
-        <span class="label" id="l-count">버전 개수</span>
-        <div class="seg" role="radiogroup" aria-labelledby="l-count">
-          <label><input type="radio" name="count" id="count-3" value="3" checked><span>3개</span></label>
-          <label><input type="radio" name="count" id="count-5" value="5"><span>5개</span></label>
+      <div class="row">
+        <div class="field" id="f-tone">
+          <label class="label" for="tone">어조</label>
+          <select id="tone">
+            <option value="">지정 안 함</option>
+            <option value="전문적">전문적</option>
+            <option value="친근한">친근한</option>
+            <option value="공감형" selected>공감형</option>
+            <option value="간결한">간결한</option>
+            <option value="진심 어린">진심 어린</option>
+            <option value="격식체">격식체</option>
+          </select>
+        </div>
+        <div class="field" id="f-count">
+          <span class="label" id="l-count">버전 개수</span>
+          <div class="seg" role="radiogroup" aria-labelledby="l-count">
+            <label><input type="radio" name="count" id="count-3" value="3" checked><span>3개</span></label>
+            <label><input type="radio" name="count" id="count-5" value="5"><span>5개</span></label>
+          </div>
         </div>
       </div>
-
-      <div class="field">
-        <label class="label" for="input" id="l-input">고객 리뷰</label>
-        <textarea id="input" spellcheck="false">택시 불렀는데 30분째 안 잡혀요. 급할 때 쓰라고 만든 앱 아닌가요</textarea>
-      </div>
-
-      <div class="actions">
-        <button type="submit" class="primary" id="go">문장 만들기</button>
-        <button type="button" id="stop" hidden>중단</button>
-      </div>
-      <p class="status" id="status" role="status" aria-live="polite"></p>
     </form>
 
     <section class="results" aria-label="결과">
@@ -865,16 +871,13 @@ function syncTopic() {
   const name = $("ctype").value;
   $("sub-error").hidden = !(name === "" || ERROR_TYPE.test(name));
   $("sub-update").hidden = !UPDATE_TYPE.test(name);
-  const hint = !name ? "버튼을 누르면 유형을 먼저 판정해 결과 위에 보여 줍니다. 틀렸으면 여기서 바꾸고 다시 만드세요. 아래 안내 방법은 앱 오류로 판정될 때만 적용됩니다."
-    : UPDATE_TYPE.test(name) ? "확인 안내는 상황을 1:1문의에 남겨달라는 안내입니다."
+  $("ctype").title = !name ? "버튼을 누르면 유형을 먼저 판정해 결과 위에 보여 줍니다. 틀렸으면 여기서 바꾸고 다시 만드세요."
     : "판정 없이 이 유형으로 바로 씁니다.";
-  $("topic-hint").hidden = false;
-  $("topic-hint").textContent = hint;
 }
 
 function remember() {
   try {
-    localStorage.setItem("cx-gen", JSON.stringify({ v: 2, app: val("app"), store: val("store"), tone: $("tone").value, count: val("count"), guide: val("guide") }));
+    localStorage.setItem("cx-gen", JSON.stringify({ v: 2, app: val("app"), store: val("store"), tone: $("tone").value, count: val("count"), guide: $("guide").value }));
   } catch (e) {}
 }
 function restore() {
@@ -886,8 +889,7 @@ function restore() {
     if (s.v === 2 && typeof s.tone === "string") $("tone").value = s.tone;
     if (s.count && $("count-" + s.count)) $("count-" + s.count).checked = true;
     if (typeof s.guide === "string") {
-      const g = document.querySelector('input[name="guide"][value="' + s.guide + '"]');
-      if (g) g.checked = true;
+      if (Array.from($("guide").options).some((o) => o.value === s.guide)) $("guide").value = s.guide;
     }
   } catch (e) {}
 }
@@ -1085,7 +1087,7 @@ function buildPrompt(text, typing) {
     lines.push("- 스토어: " + (val("store") === "ios" ? "아이폰(앱스토어)" : "안드로이드(구글플레이)"));
     if (typing.names && typing.names.length) {
       lines.push("- 리뷰 유형(" + (typing.manual ? "사용자 지정" : "판정 완료") + "): " + typing.names.join(", ") + ". 다른 유형으로 다시 판정하지 않는다.");
-      if (val("guide") && typing.names.some((n) => ERROR_TYPE.test(n))) lines.push("- 앱 오류 안내 방법(사용자 지정): " + val("guide"));
+      if ($("guide").value && typing.names.some((n) => ERROR_TYPE.test(n))) lines.push("- 앱 오류 안내 방법(사용자 지정): " + $("guide").value);
       if (typing.manual && typing.names.some((n) => UPDATE_TYPE.test(n))) lines.push("- 업데이트·개편 불만 구성: " + val("reply"));
     }
     if (inquiryApplies(typing)) {
@@ -1302,7 +1304,7 @@ function showType(typing) {
   }
   if (inquiryApplies(typing)) label.textContent += " · 1:1문의 안내로 씀";
   else if ($("inquiry").checked) label.textContent += " · 광고 불만은 1:1문의 안내를 쓰지 않음";
-  else if (val("guide") && typing.names && typing.names.some((n) => ERROR_TYPE.test(n))) label.textContent += " · 안내: " + val("guide");
+  else if ($("guide").value && typing.names && typing.names.some((n) => ERROR_TYPE.test(n))) label.textContent += " · 안내: " + $("guide").value;
   head.appendChild(label);
   box.append(head, why);
   box.hidden = false;
@@ -1330,6 +1332,8 @@ async function run(e) {
   setBusy(true);
   $("results-title").textContent = MODES[mode].label + " 결과";
   $("typeline").hidden = true;
+  // 한 열 배치(좁은 화면)에서는 결과가 폼 아래에 있으므로 결과 쪽으로 옮긴다.
+  if (matchMedia("(max-width: 860px)").matches) $("results-title").scrollIntoView({ block: "start" });
   try {
     let typing = null;
     if (mode === "review") {
