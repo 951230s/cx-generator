@@ -180,7 +180,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 <body>
 <div class="wrap">
   <header>
-    <h1>CX 문장 생성기 <span class="ver" id="ver" title="게시 버전. 다른 버전이 게시되면 이 탭을 새로고침하세요.">v60</span></h1>
+    <h1>CX 문장 생성기 <span class="ver" id="ver" title="게시 버전. 다른 버전이 게시되면 이 탭을 새로고침하세요.">v61</span></h1>
     <p>티머니GO · 고속버스 티머니 응대 문장을 팀 규칙에 맞춰 씁니다.</p>
   </header>
 
@@ -236,7 +236,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <div class="row">
           <div class="field">
             <label class="label" for="ctype">유형</label>
-            <select id="ctype"><option value="">자동 판정</option></select>
+            <select id="ctype"><option value="">자동 판정</option><option value="__vague">모호함 (확인 요청)</option></select>
           </div>
           <div class="field" id="sub-error" hidden>
             <label class="label" for="guide">앱 오류 안내</label>
@@ -462,7 +462,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 > 번거로우시겠지만 [남길 내용]을 1:1문의(경로: 선택된 앱의 1:1문의 경로)에 남겨주시면 확인 후 안내해 드리겠습니다.
 
-- [남길 내용]: 고속·시외버스, 기차, 항공은 결제일시, 출발일시, 노선 / 택시는 출발지와 도착지, 출발 시간과 도착 시간 / 자전거·킥보드는 대여·반납일시와 이용하신 기기 / 렌터카·여행과 그 밖의 서비스는 이용 일시와 상세 내용 / 서비스를 모르면 상세 내용.
+- [남길 내용]: 고속·시외버스, 기차, 항공은 결제일시, 출발일시, 노선 / 택시는 출발지와 도착지, 출발 시간과 도착 시간 / 자전거·킥보드는 대여·반납일시와 이용하신 기기 / 렌터카·여행과 그 밖의 서비스는 이용 일시와 상세 내용.
+- [대상]이 "어떤 서비스에 관한 문의인지"이면(어떤 서비스인지 알 수 없음) 위 틀 대신 팀 기준을 쓴다: "번거로우시겠지만 앱 내 1:1문의(경로: 선택된 앱의 1:1문의 경로)에 문의하실 내용을 상세히 적어주시면 보다 빠르게 정확한 답변이 가능합니다." 반드시 넣을 것: 1:1문의(경로), 문의 내용을 상세히 적어 달라는 부탁, 빠르고 정확한 답변. 뜻과 "반드시 넣을 것"을 지키고 표현은 버전마다 다르게 쓴다. 끝에 "감사합니다"를 붙이지 않는다.
 - 확인 어려움 문장은 글자 그대로 쓴다. 버전 간 차이는 도입, 뒤 문장, 마무리에서 만든다.
 - 리뷰 답변이 아니면 "남겨주신 내용만으로는"으로 쓴다.
 - 유형 지침 없이 이 틀만으로 답할 때는 뒤에 전달 문장을 붙이지 않는다.
@@ -891,11 +892,13 @@ let sample = null;
 let controller = null;
 const ERROR_TYPE = /^앱 오류: 연결 실패/;
 const UPDATE_TYPE = /^업데이트·개편 불만/;
+// 유형 선택 상자의 "모호함 (확인 요청)". 자동 판정의 0번(모호함)과 같게 names: []로 보낸다.
+const VAGUE = "__vague";
 // 유형 선택 목록은 6장 블록 제목에서 만든다. 고속버스 티머니에서는 택시·자전거 유형을 뺀다.
 function fillTypes() {
   const sel = $("ctype");
   const keep = sel.value;
-  sel.length = 1;
+  sel.length = 2; // 자동 판정, 모호함은 남긴다
   typeList(val("app")).forEach((t) => {
     const o = document.createElement("option");
     o.value = t.name;
@@ -909,7 +912,8 @@ function syncTopic() {
   const name = $("ctype").value;
   $("sub-error").hidden = !(name === "" || ERROR_TYPE.test(name));
   $("sub-update").hidden = !UPDATE_TYPE.test(name);
-  const hint = !name ? "버튼을 누르면 유형을 먼저 판정해 결과 위에 보여 줍니다. 틀렸으면 여기서 바꾸고 다시 만드세요. 앱 오류 안내 방법은 앱 오류로 판정될 때만 적용됩니다."
+  const hint = name === VAGUE ? "유형을 고르지 않고 '어떤 서비스에 관한 문의인지 확인이 어렵다'는 확인 요청과 1:1문의 안내로 답합니다."
+    : !name ? "버튼을 누르면 유형을 먼저 판정해 결과 위에 보여 줍니다. 틀렸으면 여기서 바꾸고 다시 만드세요. 앱 오류 안내 방법은 앱 오류로 판정될 때만 적용됩니다."
     : UPDATE_TYPE.test(name) ? "확인 안내는 상황을 1:1문의에 남겨달라는 안내입니다."
     : "판정 없이 이 유형으로 바로 씁니다.";
   $("topic-hint").hidden = false;
@@ -1356,7 +1360,7 @@ function showType(typing) {
   const why = document.createElement("div");
   why.className = "why";
   if (typing.manual) {
-    label.textContent = "지정 유형: " + typing.names[0];
+    label.textContent = "지정 유형: " + (typing.names.length ? typing.names[0] : "모호함 (확인 요청으로 답변)");
     why.textContent = "판정 없이 지정한 유형으로 썼습니다.";
   } else if (typing.names === null) {
     box.className = "typeline bad";
@@ -1403,7 +1407,7 @@ async function run(e) {
     if (mode === "review") {
       const chosen = $("ctype").value;
       if (chosen) {
-        typing = { names: [chosen], manual: true };
+        typing = { names: chosen === VAGUE ? [] : [chosen], manual: true };
         showType(typing);
       } else {
         setStatus("유형을 판정하고 있습니다…", false);
